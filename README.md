@@ -1,4 +1,4 @@
-# mess_management_app
+# MessApp
 
-mess management
+Digital mess card and special-dinner token system
 
