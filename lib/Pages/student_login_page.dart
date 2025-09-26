@@ -31,7 +31,7 @@ class StudentLoginPage extends StatelessWidget {
       body: Center(
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red, // Google button color
+            backgroundColor: Colors.red,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),

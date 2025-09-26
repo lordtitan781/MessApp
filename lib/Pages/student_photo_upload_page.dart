@@ -31,7 +31,6 @@ class _StudentUploadPhotoPageState extends State<StudentUploadPhotoPage> {
       return;
     }
 
-    // For now just show a snackbar, later you can send to backend
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Photo submitted successfully!")),
     );

@@ -4,7 +4,6 @@ import '../Models/Meals.dart';
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
 
-  // Static data using class structure
   final List<Meal> meals = const [
     Meal(name: "Breakfast", items: const ["Pancakes", "Scrambled Eggs", "Tea/Coffee"]),
     Meal(name: "Lunch", items: const ["Rice", "Dal", "Vegetable Curry", "Chapati", "Salad"]),

@@ -69,7 +69,6 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Card content (horizontal layout)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -107,7 +106,6 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
                 ),
               ),
 
-              // Red blinking rectangle badge at top-right corner
               if (!provider.token.hasEaten)
                 Positioned(
                   top: 8,
@@ -130,7 +128,6 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
         ),
       ),
 
-      // Temporary reset button for testing
       floatingActionButton: FloatingActionButton(
         tooltip: "Reset Token",
         child: const Icon(Icons.refresh),

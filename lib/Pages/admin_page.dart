@@ -17,7 +17,6 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   int _currentIndex = 0;
 
-  // Static menu data (editable in admin page)
   final Map<String, List<String>> _menuData = {
     "Breakfast": ["Pancakes", "Scrambled Eggs", "Tea/Coffee"],
     "Lunch": ["Rice", "Dal", "Vegetable Curry", "Chapati", "Salad"],
@@ -112,7 +111,6 @@ class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      // Page 1: Menu Management
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
@@ -154,7 +152,6 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
 
-      // Page 2: Token Management
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -178,7 +175,6 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
 
-      // Page 3: Student Data Management
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -220,7 +216,6 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
 
-      // Page 4: Settings (Logout)
       Center(
         child: ElevatedButton.icon(
           onPressed: _logout,

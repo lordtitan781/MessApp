@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/role_selection_page.dart';
-import 'pages/home_page.dart';
 import 'providers/dinner_provider.dart';
 
 void main() async {

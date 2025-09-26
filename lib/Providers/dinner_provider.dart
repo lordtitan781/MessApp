@@ -9,7 +9,6 @@ class DinnerProvider extends ChangeNotifier {
 
   SpecialDinnerToken get token => _token;
 
-  // Load from local storage
   Future<void> loadToken() async {
     final data = await StorageService.loadToken();
     if (data != null) {
@@ -18,7 +17,6 @@ class DinnerProvider extends ChangeNotifier {
     }
   }
 
-  // Redeem dinner
   Future<void> redeemDinner() async {
     _token = SpecialDinnerToken(
       hasEaten: true,
@@ -28,7 +26,6 @@ class DinnerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Reset (for testing/admin)
   Future<void> resetDinner() async {
     _token = SpecialDinnerToken(hasEaten: false, redeemedAt: null);
     await StorageService.saveToken(_token.toMap());
