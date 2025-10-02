@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/dinner_provider.dart';
 
 class SpecialDinnerPage extends StatefulWidget {
@@ -12,6 +13,7 @@ class SpecialDinnerPage extends StatefulWidget {
 class _SpecialDinnerPageState extends State<SpecialDinnerPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _blinkController;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -21,7 +23,26 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
       duration: const Duration(milliseconds: 500),
       lowerBound: 0.3,
       upperBound: 1.0,
-    )..repeat(reverse: true); // smooth blinking
+    )..repeat(reverse: true);
+
+    _loadStudentDetails();
+  }
+
+  Future<void> _loadStudentDetails() async {
+    try {
+      await context.read<DinnerProvider>().fetchStudentDetails();
+    } catch (e) {
+      debugPrint("Error fetching student details: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load details: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -59,7 +80,9 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
 
     return Scaffold(
       appBar: AppBar(title: const Text("Digital Mess Card")),
-      body: Padding(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Card(
           elevation: 6,
@@ -75,7 +98,10 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundImage: const AssetImage("assets/profile.png"),
+                      backgroundImage: provider.photoUrl.isNotEmpty
+                          ? NetworkImage(provider.photoUrl)
+                          : const AssetImage("assets/profile.png")
+                      as ImageProvider,
                       onBackgroundImageError: (_, __) {},
                     ),
                     const SizedBox(width: 20),
@@ -84,20 +110,23 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            "John Doe",
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
+                          Text(
+                            provider.name,
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 5),
-                          const Text("Roll No: 123456",
-                              style: TextStyle(fontSize: 16)),
-                          const Text("Mess: A", style: TextStyle(fontSize: 16)),
+                          Text(provider.rollNo,
+                              style: const TextStyle(fontSize: 16)),
+                          Text(provider.mess,
+                              style: const TextStyle(fontSize: 16)),
                           const SizedBox(height: 10),
-                          if (!provider.token.hasEaten)
+                          if (!provider.hasEaten)
                             ElevatedButton(
                               onPressed: () => _confirmRedeem(context),
-                              child: const Text("Redeem Special Dinner"),
+                              child:
+                              const Text("Redeem Special Dinner"),
                             ),
                         ],
                       ),
@@ -105,8 +134,7 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
                   ],
                 ),
               ),
-
-              if (!provider.token.hasEaten)
+              if (!provider.hasEaten)
                 Positioned(
                   top: 8,
                   right: 8,
@@ -127,7 +155,6 @@ class _SpecialDinnerPageState extends State<SpecialDinnerPage>
           ),
         ),
       ),
-
       floatingActionButton: FloatingActionButton(
         tooltip: "Reset Token",
         child: const Icon(Icons.refresh),
