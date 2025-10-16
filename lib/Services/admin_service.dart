@@ -101,18 +101,73 @@ class AdminService {
     return response.statusCode == 200;
   }
 
-  // ============ ISSUE SPECIAL TOKEN ============
-  Future<bool> issueToken() async {
+  // ============ START SPECIAL TOKEN ============
+  Future<bool> startToken() async {
     final token = await _getToken();
     if (token == null) return false;
 
     final response = await http.post(
-      Uri.parse("$baseUrl/special-dinner/redeem"),
+      Uri.parse("$baseUrl/special-dinner/start"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+    final body = jsonDecode(response.body);
+    print(body['error']);
+    print(body['message']);
+    return response.statusCode == 200;
+  }
+  // ============ START SPECIAL TOKEN ============
+  Future<bool> endToken() async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/special-dinner/end"),
       headers: {"Authorization": "Bearer $token"},
     );
 
     return response.statusCode == 200;
   }
+  //===========Check if Session Began=======
+  Future<bool> tokenSession() async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/tokenSession"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      print("Token session status: ${body['active']}");
+      return body['active'];
+    } else {
+      print("Failed to get token session: ${response.body}");
+      return false;
+    }
+  }
+
+// ============ FETCH MENU ============
+  Future<Map<String, dynamic>?> fetchMenu() async {
+    final backendUrl = '$baseUrl/menu';
+    final token = await _getToken();
+
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse(backendUrl),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      print(jsonDecode(response.body) );
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      print(response.body);
+      throw Exception("Failed to load menu: ${response.body}");
+    }
+  }
+
 
   // ============ LOGOUT ============
   Future<void> logout() async {

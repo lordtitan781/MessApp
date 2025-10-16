@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mess_management_app/services/admin_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'role_selection_page.dart';
 
 class AdminPage extends StatefulWidget {
@@ -19,24 +20,37 @@ class _AdminPageState extends State<AdminPage> {
   File? _studentFile;
   File? _menuFile;
 
-  // For menu editing
-  final Map<String, TextEditingController> _controllers = {
-    "Breakfast": TextEditingController(),
-    "Lunch": TextEditingController(),
-    "Dinner": TextEditingController(),
-  };
+  // For special token button
+  late String msg = "Start Session";
+
+  // Meal items
+  List<String> breakfastItems = [];
+  List<String> lunchItems = [];
+  List<String> dinnerItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initTokenSession();
+    _loadTodayMenu();
+  }
 
   @override
   void dispose() {
-    _controllers.forEach((key, controller) => controller.dispose());
     super.dispose();
+  }
+
+  Future<void> _initTokenSession() async {
+    final sessionActive = await _adminService.tokenSession();
+    setState(() {
+      msg = sessionActive ? "End Session" : "Start Session";
+    });
   }
 
   // ---- FILE PICKERS ----
   Future<void> _pickStudentFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.any,
-      //allowedExtensions: ['csv'],
     );
 
     if (result != null && result.files.single.path != null) {
@@ -50,7 +64,6 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> _pickMenuFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.any,
-      //allowedExtensions: ['csv'],
     );
 
     if (result != null && result.files.single.path != null) {
@@ -70,13 +83,6 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  Future<void> _resetStudents() async {
-    final success = await _adminService.resetStudents();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? "All students cleared" : "Failed to reset")),
-    );
-  }
-
   Future<void> _uploadMenu() async {
     if (_menuFile == null) return;
     final success = await _adminService.uploadMenu(_menuFile!);
@@ -85,23 +91,73 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  Future<void> _updateDayMenu(String day) async {
-    final success = await _adminService.updateDayMenu(
-      day,
-      _controllers["Breakfast"]!.text.split(","),
-      _controllers["Lunch"]!.text.split(","),
-      _controllers["Dinner"]!.text.split(","),
-    );
+  Future<void> _resetStudents() async {
+    final success = await _adminService.resetStudents();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? "Menu for $day updated" : "Update failed")),
+      SnackBar(content: Text(success ? "All students cleared" : "Failed to reset")),
     );
   }
 
-  Future<void> _issueToken() async {
-    final success = await _adminService.issueToken();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? "Special token issued" : "Failed to issue token")),
+  Future<void> _loadTodayMenu() async {
+    try {
+      final menu = await _adminService.fetchMenu(); // fetch today's menu
+      if (menu != null) {
+        setState(() {
+          breakfastItems = List<String>.from(menu['breakfast'] ?? []);
+          lunchItems = List<String>.from(menu['lunch'] ?? []);
+          dinnerItems = List<String>.from(menu['dinner'] ?? []);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load menu: $e")),
+      );
+    }
+  }
+
+  Future<void> _updateDayMenu() async {
+    final now = DateTime.now();
+    final currentDay = [
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    ][now.weekday - 1];
+
+    final success = await _adminService.updateDayMenu(
+      currentDay,
+      breakfastItems,
+      lunchItems,
+      dinnerItems,
     );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(success ? "Menu for $currentDay updated" : "Update failed")),
+    );
+  }
+
+  Future<void> _startToken() async {
+    final success = await _adminService.startToken();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(success ? "Special token issued" : "Failed to start token")),
+    );
+
+    if (success) setState(() => msg = "End Session");
+  }
+
+  Future<void> _endToken() async {
+    final success = await _adminService.endToken();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(success ? "Special token ended" : "Failed to end token")),
+    );
+
+    if (success) setState(() => msg = "Start Session");
+  }
+
+  Future<void> _tokenSystem() async {
+    final session = await _adminService.tokenSession();
+    if (session) {
+      await _endToken();
+    } else {
+      await _startToken();
+    }
   }
 
   Future<void> _logout() async {
@@ -114,6 +170,76 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  // Helper widget for meals
+  // Helper widget for meals
+  Widget _mealSection(String title, List<String> items) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ...items.asMap().entries.map((entry) {
+              int index = entry.key;
+              String item = entry.value;
+              return ListTile(
+                title: Text(item),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () async {
+                        String? edited = await _showEditDialog(item,"Edit Item");
+                        if (edited != null && edited.isNotEmpty) {
+                          setState(() => items[index] = edited);
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => setState(() => items.removeAt(index)),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            TextButton.icon(
+              onPressed: () async {
+                String? newItem = await _showEditDialog("","Add Item"); // empty string for new item
+                if (newItem != null && newItem.isNotEmpty) {
+                  setState(() => items.add(newItem));
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text("Add Item"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  // Dialog to edit item
+  Future<String?> _showEditDialog(String current,String msg) {
+    final controller = TextEditingController(text: current);
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(msg),
+        content: TextField(controller: controller),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text("Save")),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -123,33 +249,11 @@ class _AdminPageState extends State<AdminPage> {
         children: [
           const Text("Edit Mess Menu", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          ..._controllers.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: TextField(
-                controller: entry.value,
-                decoration: InputDecoration(
-                  labelText: entry.key,
-                  border: const OutlineInputBorder(),
-                  hintText: "Enter items separated by comma",
-                ),
-              ),
-            );
-          }),
+          _mealSection("Breakfast", breakfastItems),
+          _mealSection("Lunch", lunchItems),
+          _mealSection("Dinner", dinnerItems),
           ElevatedButton(
-            onPressed: () {
-              final now = DateTime.now();
-              final currentDay = [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday"
-              ][now.weekday - 1];
-              _updateDayMenu(currentDay);
-            },
+            onPressed: _updateDayMenu,
             child: const Text("Save Today's Menu"),
           ),
           const Divider(),
@@ -170,8 +274,8 @@ class _AdminPageState extends State<AdminPage> {
       // ---- Special Token Page ----
       Center(
         child: ElevatedButton(
-          onPressed: _issueToken,
-          child: const Text("Issue Special Dinner Token"),
+          onPressed: _tokenSystem,
+          child: Text(msg),
         ),
       ),
 
